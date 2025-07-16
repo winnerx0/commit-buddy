@@ -22,7 +22,7 @@ Before you begin, ensure you have the following installed:
 
 * **Git**: [Download and Install Git](https://git-scm.com/)
 
-* **Gemini API Key**: You'll need an API key from Google's Gemini API. You can obtain one by following the instructions on the [Google AI Studio](https://makersuite.google.com/) website.
+* **Gemini API Key**: You'll need an API key from Google's Gemini API. You can obtain one by following the instructions on the [Google AI Studio](https://aistudio.google.com/) website.
 
 ### Installation
 
