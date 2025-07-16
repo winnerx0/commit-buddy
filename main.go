@@ -74,10 +74,10 @@ func main() {
 			{
 				Parts: []ContentPart{
 					{
-		Text: fmt.Sprintf(
-    "You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>: <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added `SomeUtility` to handle core logic for X\n- Updated `SomeComponent` to support new behavior Y\n- Refactored `someFile.js` for improved performance\n\nOnly return the formatted message — no extra explanation or commentary and please add bold text when needed.\n\nGit diff:\n\n%s",
-    string(diffOutput),
-),
+						Text: fmt.Sprintf(
+							"You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>(<scope>): <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added `SomeUtility` to handle core logic for X\n- Updated `SomeComponent` to support new behavior Y\n- Refactored `someFile.js` for improved performance\n\nOnly return the formatted message — no extra explanation or commentary. If you are not confident about a message or what something does **strictly** do not add it to the commit message\n\nGit diff:\n\n%s",
+							string(diffOutput),
+						),
 					},
 				},
 			},
