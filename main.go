@@ -88,7 +88,7 @@ func main() {
 
 	bodyBytes, err := json.MarshalIndent(reqBody, "", "  ")
 	if err != nil {
-		fmt.Printf("failed to encode request body: %v", err)
+		fmt.Print("Failed to encode request body:", err)
 	}
 
 	req, err := http.NewRequest("POST", "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", bytes.NewReader([]byte(bodyBytes)))
