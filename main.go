@@ -194,12 +194,13 @@ func generateCommit() tea.Cmd {
 		}
 
 		body, err := io.ReadAll(res.Body)
-		defer res.Body.Close()
 
 		if err != nil {
 			return errMsg{err: err}
 		}
 
+		defer res.Body.Close()
+		
 		if res.StatusCode != 200 {
 			var error Error
 
