@@ -148,9 +148,9 @@ func generateCommit() tea.Cmd {
 	return func() tea.Msg {
 		client := &http.Client{}
 
-		command := exec.Command("git", "diff", "--staged")
+		c := exec.Command("git", "diff", "--staged")
 
-		diffOutput, err := command.Output()
+		diffOutput, err := c.Output()
 
 		if err != nil {
 			return errMsg{err: err}
