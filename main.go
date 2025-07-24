@@ -89,7 +89,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, commitCode(m.commit)
 		}
 		switch msg.String() {
-		case "q", "esc", "ctrl+c":
+		case "q", "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
 		default:
@@ -124,7 +124,7 @@ func (m model) View() string {
 	}
 
 	if m.commit != "" && m.waiting {
-		return fmt.Sprintf("%s\nPress Enter to commit or Ctrl+C to cancel...\n", m.commit)
+		return fmt.Sprintf("%s\nPress Enter to commit or Ctrl+C or q to cancel...\n", m.commit)
 	}
 
 	return ""
@@ -157,7 +157,7 @@ func generateCommit() tea.Cmd {
 		}
 
 		if len(diffOutput) == 0 {
-			return errMsg{err: errors.New("No staged changes found. Please stage changes using `git add .` or `git add <file>`.")}
+			return errMsg{err: errors.New("No staged changes found. Please stage changes using `git add .` or `git add <file>`")}
 		}
 
 		var reqBody = GenerateReq{
