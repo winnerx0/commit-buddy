@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,29 +11,29 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/joho/godotenv"
 )
 
 type AIResponse struct {
-	Candidates []struct {
-		Content struct {
-			Parts []struct {
-				Text string `json:"text"`
-			} `json:"parts"`
-		} `json:"content"`
-	} `json:"candidates"`
+	Choices []struct {
+		Message struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
 }
 
-type ContentPart struct {
-	Text string `json:"text"`
-}
-
-type ContentItem struct {
-	Parts []ContentPart `json:"parts"`
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 type GenerateReq struct {
-	Contents []ContentItem `json:"contents"`
+	Model    string    `json:"model"`
+	Messages []Message `json:"messages"`
 }
 
 type Error struct {
@@ -43,112 +44,189 @@ type Error struct {
 	} `json:"error"`
 }
 
+type model struct {
+	spinner  spinner.Model
+	quitting bool
+	err      error
+	commit   string
+	spinning bool
+	waiting  bool
+}
+
+type errMsg struct {
+	err error
+}
+
+type commitMsg struct {
+	commit string
+}
+
+type commitDoneMsg struct {
+	err error
+}
+
+func (m model) Init() tea.Cmd {
+	return tea.Batch(
+		m.spinner.Tick, generateCommit(),
+	)
+}
+
+func initialModel() model {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("260"))
+	return model{
+		spinner:  s,
+		spinning: true,
+	}
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if msg.String() == "enter" && m.waiting && m.commit != "" {
+			return m, commitCode(m.commit)
+		}
+		switch msg.String() {
+		case "q", "esc", "ctrl+c":
+			m.quitting = true
+			return m, tea.Quit
+		default:
+			return m, nil
+		}
+	case errMsg:
+		m.err = msg.err
+		m.spinning = false
+		return m, tea.Quit
+	case commitMsg:
+		m.spinning = false
+		m.commit = msg.commit
+		m.waiting = true
+		return m, nil
+	default:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	}
+}
+
+func (m model) View() string {
+	if m.err != nil {
+		return fmt.Sprintf("Error: %s", m.err.Error())
+	}
+
+	str := fmt.Sprintf("\n %s Generating Commit...", m.spinner.View())
+
+	if !m.spinning {
+		return fmt.Sprintf("%s\n %s", m.commit, "Press Enter to add this commit, or Ctrl+C to cancel...")
+	}
+
+	return str
+}
+
 func init() {
 	godotenv.Load(".env")
 }
 
 func main() {
 
-	client := &http.Client{}
+	p := tea.NewProgram(initialModel())
 
-	// _ := flag.String("g", "", "Generate a commit")
-
-	// flag.Parse()
-
-	command := exec.Command("git", "diff", "--staged")
-
-	diffOutput, err := command.Output()
-
-	if err != nil {
-		fmt.Println("Error", err)
-		return
+	if _, err := p.Run(); err != nil {
+		fmt.Printf(err.Error())
+		os.Exit(1)
 	}
+}
 
-	if len(diffOutput) == 0 {
-		fmt.Println("Please run git add before commit buddy")
-		return
-	}
+func generateCommit() tea.Cmd {
+	return func() tea.Msg {
+		client := &http.Client{}
 
-	var reqBody = GenerateReq{
-		Contents: []ContentItem{
-			{
-				Parts: []ContentPart{
-					{
-						Text: fmt.Sprintf(
-							"You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>(<scope>): <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added SomeUtility to handle core logic for X\n- Updated SomeComponent to support new behavior Y\n- Refactored someFile.js for improved performance\n\nOnly return the non formatted message — no extra explanation or commentary. If you are not confident about a message or what something does **strictly** do not add it to the commit message\n\nGit diff:\n\n%s ",
-							string(diffOutput),
-						),
-					},
-				},
-			},
-		},
-	}
+		command := exec.Command("git", "diff", "--staged")
 
-	fmt.Println("Generating commit...")
-
-	bodyBytes, err := json.MarshalIndent(reqBody, "", "  ")
-	if err != nil {
-		fmt.Print("Failed to encode request body:", err)
-	}
-
-	req, err := http.NewRequest("POST", "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", bytes.NewReader([]byte(bodyBytes)))
-
-	if err != nil {
-		fmt.Println("Error", err)
-		return
-	}
-
-	defer req.Body.Close()
-
-	req.Header.Add("X-goog-api-key", os.Getenv("GEMINI_API_KEY"))
-	req.Header.Add("Content-Type", "application/json")
-
-	res, err := client.Do(req)
-
-	if err != nil {
-		fmt.Println("Error", err)
-		return
-	}
-
-	body, err := io.ReadAll(res.Body)
-
-	if err != nil {
-		fmt.Println("Error ", err)
-		return
-	}
-
-	if res.StatusCode != 200 {
-		var error Error
-
-		err = json.Unmarshal(body, &error)
+		diffOutput, err := command.Output()
 
 		if err != nil {
-			fmt.Println("Error parsing", err)
-			return
+			return errMsg{err: err}
 		}
-		fmt.Println(error.Error.Message)
-		return
+
+		if len(diffOutput) == 0 {
+			return errMsg{err: errors.New("No changed made")}
+		}
+
+		var reqBody = GenerateReq{
+			Model: "google/gemini-2.5-flash-lite",
+			Messages: []Message{
+				Message{
+					Role: "user",
+					Content: fmt.Sprintf(
+						"You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>(<scope>): <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added SomeUtility to handle core logic for X\n- Updated SomeComponent to support new behavior Y\n- Refactored someFile.js for improved performance\n\nOnly return the non formatted message — no extra explanation or commentary. If you are not confident about a message or what something does **strictly** do not add it to the commit message\n\nGit diff:\n\n%s ",
+						string(diffOutput),
+					),
+				},
+			},
+		}
+
+		bodyBytes, err := json.MarshalIndent(reqBody, "", "  ")
+		if err != nil {
+			return errMsg{err: errors.New("Failed to encode request body")}
+		}
+
+		req, err := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewReader([]byte(bodyBytes)))
+
+		if err != nil {
+			return errMsg{err: err}
+		}
+
+		req.Header.Add("Authorization", "Bearer "+os.Getenv("OPEN_ROUTER_API_KEY"))
+		req.Header.Add("Content-Type", "application/json")
+
+		res, err := client.Do(req)
+
+		if err != nil {
+			return errMsg{err: err}
+		}
+
+		body, err := io.ReadAll(res.Body)
+		defer res.Body.Close()
+
+		if err != nil {
+			return errMsg{err: err}
+		}
+
+		if res.StatusCode != 200 {
+			var error Error
+
+			err = json.Unmarshal(body, &error)
+
+			if err != nil {
+				return errMsg{err: err}
+			}
+			fmt.Println(error.Error.Message)
+			return errMsg{err: err}
+		}
+
+		var aiResponse AIResponse
+
+		err = json.Unmarshal(body, &aiResponse)
+
+		if err != nil {
+			return errMsg{err: err}
+		}
+
+		commit := strings.ReplaceAll(aiResponse.Choices[0].Message.Content, "```", "")
+
+		return commitMsg{
+			commit: commit,
+		}
 	}
+}
 
-	var aiResponse AIResponse
+func commitCode(commit string) tea.Cmd {
 
-	err = json.Unmarshal(body, &aiResponse)
-
-	if err != nil {
-		fmt.Println("Error parsing", err)
-		return
-	}
-
-	commit := strings.ReplaceAll(aiResponse.Candidates[0].Content.Parts[0].Text, "```", "")
-
-	fmt.Println(commit)
-	fmt.Print("Press Enter to add this commit, or Ctrl+C to cancel...")
-
-	fmt.Scanln()
-
-	cmd := exec.Command("git", "commit", "-m", commit)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Run()
-
+	c := exec.Command("git", "commit", "-m", commit)
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		return commitDoneMsg{err}
+	})
 }
