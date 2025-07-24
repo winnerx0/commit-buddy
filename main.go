@@ -98,12 +98,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case errMsg:
 		m.err = msg.err
 		m.spinning = false
-		return m, tea.Quit
+		return m, nil
 	case commitMsg:
 		m.spinning = false
 		m.commit = msg.commit
 		m.waiting = true
 		return m, nil
+	case commitDoneMsg:
+		m.waiting = false
+		return m, tea.Quit
 	default:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -113,16 +116,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("Error: %s", m.err.Error())
+		return m.err.Error()
 	}
 
-	str := fmt.Sprintf("\n %s Generating Commit...", m.spinner.View())
-
-	if !m.spinning {
-		return fmt.Sprintf("%s\n %s", m.commit, "Press Enter to add this commit, or Ctrl+C to cancel...")
+	if m.spinning {
+		return fmt.Sprintf("\n %s Generating Commit...\n", m.spinner.View())
 	}
 
-	return str
+	if m.commit != "" && m.waiting {
+		return fmt.Sprintf("%s\nPress Enter to commit or Ctrl+C to cancel...\n", m.commit)
+	}
+
+	return ""
 }
 
 func init() {
@@ -152,7 +157,7 @@ func generateCommit() tea.Cmd {
 		}
 
 		if len(diffOutput) == 0 {
-			return errMsg{err: errors.New("No changed made")}
+			return errMsg{err: errors.New("No staged changes found. Please stage changes using `git add .` or `git add <file>`.")}
 		}
 
 		var reqBody = GenerateReq{
@@ -203,8 +208,6 @@ func generateCommit() tea.Cmd {
 			if err != nil {
 				return errMsg{err: err}
 			}
-			fmt.Println(error.Error.Message)
-			return errMsg{err: err}
 		}
 
 		var aiResponse AIResponse
