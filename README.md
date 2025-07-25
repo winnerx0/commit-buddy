@@ -27,7 +27,7 @@ Before you begin, ensure you have the following installed:
 ### Installation
 
 ```bash
-bash -c "{curl -s https://github.com/winnerx0/commit-buddy.git 
+# bash -c "{curl -s https://github.com/winnerx0/commit-buddy.git 
 git clone https://github.com/winnerx0/commit-buddy.git
 
 cd commit-buddy

@@ -14,7 +14,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/joho/godotenv"
 )
 
 type AIResponse struct {
@@ -98,7 +97,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case errMsg:
 		m.err = msg.err
 		m.spinning = false
-		return m, nil
+		return m, tea.Quit
 	case commitMsg:
 		m.spinning = false
 		m.commit = msg.commit
@@ -115,8 +114,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+	
+	
+	if os.Getenv("OPEN_ROUTER_API_KEY") == "" {
+		return fmt.Sprintln("\nPlease export your Open Router Api Key")
+	}
+	
 	if m.err != nil {
-		return m.err.Error()
+		return fmt.Sprintf("\n %s", m.err.Error())
 	}
 
 	if m.spinning {
@@ -128,10 +133,6 @@ func (m model) View() string {
 	}
 
 	return ""
-}
-
-func init() {
-	godotenv.Load(".env")
 }
 
 func main() {
@@ -200,7 +201,7 @@ func generateCommit() tea.Cmd {
 		}
 
 		defer res.Body.Close()
-		
+
 		if res.StatusCode != 200 {
 			var error Error
 
@@ -217,6 +218,10 @@ func generateCommit() tea.Cmd {
 
 		if err != nil {
 			return errMsg{err: err}
+		}
+
+		if len(aiResponse.Choices) == 0 {
+			return errMsg{err: errors.New("No commit message generated")}
 		}
 
 		commit := strings.ReplaceAll(aiResponse.Choices[0].Message.Content, "```", "")
