@@ -97,7 +97,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case errMsg:
 		m.err = msg.err
 		m.spinning = false
-		return m, tea.Quit
+		return m, nil
 	case commitMsg:
 		m.spinning = false
 		m.commit = msg.commit
@@ -105,7 +105,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case commitDoneMsg:
 		m.waiting = false
-		return m, nil
+		return m, tea.Quit
 	default:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
