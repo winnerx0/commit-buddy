@@ -105,7 +105,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case commitDoneMsg:
 		m.waiting = false
-		return m, tea.Quit
+		return m, nil
 	default:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -157,7 +157,7 @@ func generateCommit() tea.Cmd {
 			return errMsg{err: err}
 		}
 
-		if len(diffOutput) == 0 {
+		if len(diffOutput) <= 0 {
 			return errMsg{err: errors.New("No staged changes found. Please stage changes using `git add .` or `git add <file>`")}
 		}
 
