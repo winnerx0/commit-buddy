@@ -15,11 +15,11 @@ else
     
     go build -o cb .
     
-    mv ./cb /usr/local/bin
+    sudo mv ./cb /usr/local/bin
     
     cd ..
     
-    # rm -r "$current_dir"
+    sudo rm -rf "$current_dir"
 fi
 
 echo "Installation complete please run cb to get started!"
