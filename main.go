@@ -93,12 +93,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.textarea.SetWidth(msg.Width)
-		m.textarea.SetHeight(strings.Count(m.commit, "\n") + 20)
+		m.textarea.SetHeight(strings.Count(m.commit, "\n") + 10)
 		m.initialized = true
 
 		return m, nil
 	case tea.KeyMsg:
-		if msg.String() == "enter" && m.waiting && m.commit != "" {
+		if msg.Type == tea.KeyCtrlS && m.waiting && m.commit != "" {
 			m.commit = m.textarea.Value()
 			return m, commitCode(m.commit)
 		}
