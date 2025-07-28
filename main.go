@@ -109,13 +109,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case "e":
-			m.editing = true
-			m.waiting = false
-			m.textarea.Focus()
-			m.textarea.SetValue(m.commit)
-			return m, cmd
+			if m.waiting {
+
+				m.editing = true
+				m.waiting = false
+				m.textarea.Focus()
+				m.textarea.SetValue(m.commit)
+				return m, cmd
+			}
 		case "enter":
 			if m.commit != "" && m.waiting {
+				m.editing = false
 				return m, commitCode(m.commit)
 			}
 		default:
