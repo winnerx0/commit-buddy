@@ -93,7 +93,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.textarea.SetWidth(msg.Width)
-		m.textarea.SetHeight(strings.Count(m.commit, "\n") + 10)
+		m.textarea.SetHeight(strings.Count(m.commit, "\n") + 5)
 		m.initialized = true
 
 		return m, nil
@@ -144,7 +144,7 @@ func (m model) View() string {
 	}
 
 	if m.commit != "" && m.waiting {
-		return fmt.Sprintf("%s\n Press Enter to commit or Ctrl+C", m.textarea.View())
+		return fmt.Sprintf("%s\n Press Ctrl+S to commit or Ctrl+C", m.textarea.View())
 	}
 
 	return ""
