@@ -53,6 +53,7 @@ type model struct {
 	spinning    bool
 	waiting     bool
 	initialized bool
+	editing     bool
 }
 
 type errMsg struct {
@@ -102,10 +103,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.commit = m.textarea.Value()
 			return m, commitCode(m.commit)
 		}
+
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
+		case "e":
+			m.editing = true
+			m.waiting = false
+			m.textarea.Focus()
+			m.textarea.SetValue(m.commit)
+			return m, cmd
+		case "enter":
+			if m.commit != "" && m.waiting {
+				return m, commitCode(m.commit)
+			}
+
 		default:
 			return m, nil
 		}
@@ -118,11 +131,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinning = false
 		m.commit = msg.commit
 		m.waiting = true
-		m.textarea.Focus()
-		m.textarea.SetValue(msg.commit)
 		return m, cmd
 	case commitDoneMsg:
-		m.waiting = false
 		return m, tea.Quit
 
 	}
@@ -144,6 +154,10 @@ func (m model) View() string {
 	}
 
 	if m.commit != "" && m.waiting {
+		return fmt.Sprintf("%s\n Press e to edit or Ctrl+C to concel", m.commit)
+	}
+
+	if m.commit != "" && !m.waiting && m.editing {
 		return fmt.Sprintf("%s\n Press Ctrl+S to commit or Ctrl+C", m.textarea.View())
 	}
 
