@@ -19,7 +19,7 @@ else
     
     cd ..
     
-    sudo rm -rf "$current_dir"
+    rm -rf "$current_dir"
 fi
 
 echo "Installation complete please run cb to get started!"

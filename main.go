@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -44,12 +45,14 @@ type Error struct {
 }
 
 type model struct {
-	spinner  spinner.Model
-	quitting bool
-	err      error
-	commit   string
-	spinning bool
-	waiting  bool
+	textarea    textarea.Model
+	spinner     spinner.Model
+	quitting    bool
+	err         error
+	commit      string
+	spinning    bool
+	waiting     bool
+	initialized bool
 }
 
 type errMsg struct {
@@ -66,25 +69,37 @@ type commitDoneMsg struct {
 
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
-		m.spinner.Tick, generateCommit(),
+		m.spinner.Tick, generateCommit(), textarea.Blink,
 	)
 }
 
 func initialModel() model {
+	ta := textarea.New()
+	ta.Placeholder = "Write your commit message..."
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("260"))
 	return model{
 		spinner:  s,
 		spinning: true,
+		textarea: ta,
 	}
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
+	var cmd tea.Cmd
+	m.textarea, cmd = m.textarea.Update(msg)
+	m.spinner, cmd = m.spinner.Update(msg)
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.textarea.SetWidth(msg.Width)
+		m.textarea.SetHeight(strings.Count(m.commit, "\n") + 20)
+		m.initialized = true
+
+		return m, nil
 	case tea.KeyMsg:
 		if msg.String() == "enter" && m.waiting && m.commit != "" {
+			m.commit = m.textarea.Value()
 			return m, commitCode(m.commit)
 		}
 		switch msg.String() {
@@ -99,27 +114,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinning = false
 		return m, nil
 	case commitMsg:
+		var cmd tea.Cmd
 		m.spinning = false
 		m.commit = msg.commit
 		m.waiting = true
-		return m, nil
+		m.textarea.Focus()
+		m.textarea.SetValue(msg.commit)
+		return m, cmd
 	case commitDoneMsg:
 		m.waiting = false
 		return m, tea.Quit
-	default:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
+
 	}
+
+	return m, cmd
 }
 
 func (m model) View() string {
-	
-	
 	if os.Getenv("OPEN_ROUTER_API_KEY") == "" {
 		return fmt.Sprintln("\nPlease export your Open Router Api Key")
 	}
-	
+
 	if m.err != nil {
 		return fmt.Sprintf("\n %s", m.err.Error())
 	}
@@ -129,14 +144,13 @@ func (m model) View() string {
 	}
 
 	if m.commit != "" && m.waiting {
-		return fmt.Sprintf("%s\nPress Enter to commit or Ctrl+C or q to cancel...\n", m.commit)
+		return fmt.Sprintf("%s\n Press Enter to commit or Ctrl+C", m.textarea.View())
 	}
 
 	return ""
 }
 
 func main() {
-
 	p := tea.NewProgram(initialModel())
 
 	if _, err := p.Run(); err != nil {
@@ -152,7 +166,6 @@ func generateCommit() tea.Cmd {
 		c := exec.Command("git", "diff", "--staged")
 
 		diffOutput, err := c.Output()
-
 		if err != nil {
 			return errMsg{err: err}
 		}
@@ -161,10 +174,10 @@ func generateCommit() tea.Cmd {
 			return errMsg{err: errors.New("No staged changes found. Please stage changes using `git add .` or `git add <file>`")}
 		}
 
-		var reqBody = GenerateReq{
+		reqBody := GenerateReq{
 			Model: "google/gemini-2.5-flash-lite",
 			Messages: []Message{
-				Message{
+				{
 					Role: "user",
 					Content: fmt.Sprintf(
 						"You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>(<scope>): <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added SomeUtility to handle core logic for X\n- Updated SomeComponent to support new behavior Y\n- Refactored someFile.js for improved performance\n\nOnly return the non formatted message — no extra explanation or commentary. If you are not confident about a message or what something does **strictly** do not add it to the commit message\n\nGit diff:\n\n%s ",
@@ -180,7 +193,6 @@ func generateCommit() tea.Cmd {
 		}
 
 		req, err := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewReader([]byte(bodyBytes)))
-
 		if err != nil {
 			return errMsg{err: err}
 		}
@@ -189,13 +201,11 @@ func generateCommit() tea.Cmd {
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := client.Do(req)
-
 		if err != nil {
 			return errMsg{err: err}
 		}
 
 		body, err := io.ReadAll(res.Body)
-
 		if err != nil {
 			return errMsg{err: err}
 		}
@@ -206,7 +216,6 @@ func generateCommit() tea.Cmd {
 			var error Error
 
 			err = json.Unmarshal(body, &error)
-
 			if err != nil {
 				return errMsg{err: err}
 			}
@@ -215,7 +224,6 @@ func generateCommit() tea.Cmd {
 		var aiResponse AIResponse
 
 		err = json.Unmarshal(body, &aiResponse)
-
 		if err != nil {
 			return errMsg{err: err}
 		}
@@ -233,7 +241,6 @@ func generateCommit() tea.Cmd {
 }
 
 func commitCode(commit string) tea.Cmd {
-
 	c := exec.Command("git", "commit", "-m", commit)
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return commitDoneMsg{err}
