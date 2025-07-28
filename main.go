@@ -99,11 +99,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 	case tea.KeyMsg:
-		if msg.Type == tea.KeyCtrlS && m.waiting && m.commit != "" {
+		if msg.Type == tea.KeyCtrlS && m.commit != "" {
 			m.commit = m.textarea.Value()
 			return m, commitCode(m.commit)
-		} else {
-			return m, nil
 		}
 
 		switch msg.String() {
@@ -119,10 +117,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.commit != "" && m.waiting {
 				return m, commitCode(m.commit)
-			} else {
-				return m, nil
 			}
-
 		default:
 			return m, nil
 		}
