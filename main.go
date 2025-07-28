@@ -102,6 +102,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.KeyCtrlS && m.waiting && m.commit != "" {
 			m.commit = m.textarea.Value()
 			return m, commitCode(m.commit)
+		} else {
+			return m, nil
 		}
 
 		switch msg.String() {
@@ -117,6 +119,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.commit != "" && m.waiting {
 				return m, commitCode(m.commit)
+			} else {
+				return m, nil
 			}
 
 		default:
@@ -154,7 +158,7 @@ func (m model) View() string {
 	}
 
 	if m.commit != "" && m.waiting {
-		return fmt.Sprintf("%s\n Press e to edit or Ctrl+C to concel", m.commit)
+		return fmt.Sprintf("%s\n Press enter to commit or e to edit or Ctrl+C to concel", m.commit)
 	}
 
 	if m.commit != "" && !m.waiting && m.editing {
