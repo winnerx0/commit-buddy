@@ -100,6 +100,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyMsg:
 		if msg.Type == tea.KeyCtrlS && m.commit != "" {
+			m.editing = false
 			m.commit = m.textarea.Value()
 			return m, commitCode(m.commit)
 		}
