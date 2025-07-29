@@ -77,6 +77,7 @@ func (m model) Init() tea.Cmd {
 func initialModel() model {
 	ta := textarea.New()
 	ta.Placeholder = "Write your commit message..."
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("260"))
@@ -159,11 +160,11 @@ func (m model) View() string {
 	}
 
 	if m.commit != "" && m.waiting {
-		return fmt.Sprintf("%s\n Press enter to commit or e to edit or Ctrl+C to concel", m.commit)
+		return fmt.Sprintf("%s\n\n Press enter to Commit or e to Edit or Ctrl+C to Cancel", m.commit)
 	}
 
 	if m.commit != "" && !m.waiting && m.editing {
-		return fmt.Sprintf("%s\n Press Ctrl+S to commit or Ctrl+C", m.textarea.View())
+		return fmt.Sprintf("%s\n Press Ctrl+S to Commit or Ctrl+C to Cancel", m.textarea.View())
 	}
 
 	return ""
