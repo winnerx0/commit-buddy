@@ -128,6 +128,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case errMsg:
 		m.err = msg.err
 		m.spinning = false
+		m.quitting = true
 		return m, nil
 	case commitMsg:
 		var cmd tea.Cmd
@@ -145,7 +146,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if os.Getenv("OPEN_ROUTER_API_KEY") == "" {
-		return fmt.Sprintln("\nPlease export your Open Router Api Key")
+		return fmt.Sprintf("\n %s", "Please export your Open Router Api Key")
 	}
 
 	if m.err != nil {
