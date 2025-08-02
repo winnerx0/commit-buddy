@@ -162,7 +162,7 @@ func (m model) View() string {
 	}
 
 	if m.commit != "" && m.waiting {
-		return fmt.Sprintf("%s\n\n Press enter to Commit or e to Edit or Ctrl+C to Cancel", m.commit)
+		return fmt.Sprintf("%s\n\n Press Enter to Commit or e to Edit or Ctrl+C to Cancel", m.commit)
 	}
 
 	if m.commit != "" && !m.waiting && m.editing {
