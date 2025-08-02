@@ -95,7 +95,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.textarea.SetWidth(msg.Width)
-		m.textarea.SetHeight(strings.Count(m.commit, "\n") + 5)
+		m.textarea.SetHeight(strings.Count(m.commit, "\n") + 3)
 		m.initialized = true
 
 		return m, nil
@@ -113,12 +113,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "e":
 			if m.waiting {
 
+				m.textarea.SetHeight(strings.Count(m.commit, "\n") + 3)
 				m.editing = true
 				m.waiting = false
 				m.textarea.Focus()
 				m.textarea.SetValue(m.commit)
 				return m, cmd
 			}
+			return m, nil
 		case "enter":
 			if m.commit != "" && m.waiting {
 				m.editing = false
