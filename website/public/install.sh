@@ -5,9 +5,13 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 else
     
-    git clone https://github.com/winnerx0/commit-buddy.git
+   curl -LO https://github.com/winnerx0/commit-buddy/releases/download/commit-buddy/cb.zip
     
-    cd commit-buddy
+    unzip cb.zip
+    
+    rm cb.zip
+    
+    cd cb
     
     current_dir=$(pwd)
     
@@ -18,6 +22,7 @@ else
     cd ..
     
     rm -rf "$current_dir"
+    
 fi
 
 echo "Installation complete please run cb to get started!"
