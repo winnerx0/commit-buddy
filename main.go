@@ -32,10 +32,20 @@ type Message struct {
 }
 
 type GenerateReq struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
+	Contents []Content `json:"contents"`
 }
 
+type Content struct {
+	Parts []Part `json:"parts"`
+}
+
+type Part struct {
+	Text []Text `json:"text"`
+}
+
+type Text struct {
+	Text string
+}
 type Error struct {
 	Error struct {
 		Code    int    `json:"code"`
@@ -197,14 +207,19 @@ func generateCommit() tea.Cmd {
 		}
 
 		reqBody := GenerateReq{
-			Model: "google/gemini-2.5-flash-lite",
-			Messages: []Message{
+			Contents: []Content{
 				{
-					Role: "user",
-					Content: fmt.Sprintf(
-						"You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>(<scope>): <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added SomeUtility to handle core logic for X\n- Updated SomeComponent to support new behavior Y\n- Refactored someFile.js for improved performance\n\nOnly return the non formatted message — no extra explanation or commentary. If you are not confident about a message or what something does **strictly** do not add it to the commit message\n\nGit diff:\n\n%s ",
-						string(diffOutput),
-					),
+					Parts: []Part{
+						{
+							Text: []Text{
+								{
+									Text: fmt.Sprintf(
+										"You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>(<scope>): <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added SomeUtility to handle core logic for X\n- Updated SomeComponent to support new behavior Y\n- Refactored someFile.js for improved performance\n\nOnly return the non formatted message — no extra explanation or commentary. If you are not confident about a message or what something does **strictly** do not add it to the commit message\n\nGit diff:\n\n%s ",
+										string(diffOutput)),
+								},
+							},
+						},
+					},
 				},
 			},
 		}
@@ -214,12 +229,12 @@ func generateCommit() tea.Cmd {
 			return errMsg{err: errors.New("Failed to encode request body")}
 		}
 
-		req, err := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewReader([]byte(bodyBytes)))
+		req, err := http.NewRequest("POST", "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent", bytes.NewReader([]byte(bodyBytes)))
 		if err != nil {
 			return errMsg{err: err}
 		}
 
-		req.Header.Add("Authorization", "Bearer "+os.Getenv("OPEN_ROUTER_API_KEY"))
+		req.Header.Add("x-goog-api-key", "Bearer "+os.Getenv("GEMINI_API_KEY"))
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := client.Do(req)
@@ -232,8 +247,6 @@ func generateCommit() tea.Cmd {
 			return errMsg{err: err}
 		}
 
-		defer res.Body.Close()
-
 		if res.StatusCode != 200 {
 			var error Error
 
@@ -243,16 +256,21 @@ func generateCommit() tea.Cmd {
 			}
 		}
 
+		defer res.Body.Close()
+
 		var aiResponse AIResponse
 
 		err = json.Unmarshal(body, &aiResponse)
+
 		if err != nil {
 			return errMsg{err: err}
 		}
 
 		if len(aiResponse.Choices) == 0 {
-			return errMsg{err: errors.New("No commit message generated")}
+			return errMsg{err: errors.New("No commit generated")}
 		}
+		
+		fmt.Println(string(body))
 
 		commit := strings.ReplaceAll(aiResponse.Choices[0].Message.Content, "```", "")
 
