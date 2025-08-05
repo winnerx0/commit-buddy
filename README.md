@@ -22,7 +22,7 @@ Before you begin, ensure you have the following installed:
 
 * **Git**: [Download and Install Git](https://git-scm.com/)
 
-* **Open Router API Key**: You'll need an API key from Open Router. You can obtain one by following the instructions on the [Open Router](https://openrouter.com/) website.
+* **Open Gemini API Key**: You'll need an API key from Gemini. You can obtain one by following the instructions on the [Gemini](https://aistudio.google.com/) website.
 
 ### Installation
 
@@ -43,12 +43,12 @@ sudo mv cb /usr/local/bin/
 
 ### API Key Setup
 
-Commit Buddy requires your Gemini API key to function. It reads this key from an environment variable named `OPEN_ROUTER_API_KEY`.
+Commit Buddy requires your Gemini API key to function. It reads this key from an environment variable named `GEMINI_API_KEY`.
 
 **Recommended for current session:**
 
 ```bash
-export OPEN_ROUTER_API_KEY="YOUR_OPEN_ROUTER_API_KEY"
+export OPEN_ROUTER_API_KEY="YOUR_GEMINI_API_KEY"
 ```
 
 **For persistent setup:**

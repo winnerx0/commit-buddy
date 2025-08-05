@@ -18,12 +18,13 @@ import (
 )
 
 type AIResponse struct {
-	Choices []struct {
-		Message struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
+	Candidates []struct {
+		Content struct {
+			Parts []struct {
+				Text string `json:"text"`
+			} `json:"parts"`
+		} `json:"content"`
+	} `json:"candidates"`
 }
 
 type Message struct {
@@ -40,7 +41,7 @@ type Content struct {
 }
 
 type Part struct {
-	Text []Text `json:"text"`
+	Text string `json:"text"`
 }
 
 type Text struct {
@@ -211,13 +212,9 @@ func generateCommit() tea.Cmd {
 				{
 					Parts: []Part{
 						{
-							Text: []Text{
-								{
-									Text: fmt.Sprintf(
-										"You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>(<scope>): <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added SomeUtility to handle core logic for X\n- Updated SomeComponent to support new behavior Y\n- Refactored someFile.js for improved performance\n\nOnly return the non formatted message — no extra explanation or commentary. If you are not confident about a message or what something does **strictly** do not add it to the commit message\n\nGit diff:\n\n%s ",
-										string(diffOutput)),
-								},
-							},
+							Text: fmt.Sprintf(
+								"You are an AI commit assistant. Based on the following Git diff, generate a high-quality, conventional commit message with the following structure:\n\n1. A single-line header:\n   <type>(<scope>): <short summary>\n   - Use a valid conventional commit type (e.g., feat, fix, refactor, docs, test, chore, style, ci)\n   - Write the summary in the imperative mood (e.g., 'add support for X')\n\n2. A bullet point list describing the main technical changes:\n   - Mention key files, components, classes, or functions changed or added\n   - Use inline code formatting for file names and class/function names (e.g., `someFile.js`, `SomeClass`)\n   - Explain each item concisely and clearly\n\nExample output:\n\n<type>: <short, clear summary of the change>\n- Added SomeUtility to handle core logic for X\n- Updated SomeComponent to support new behavior Y\n- Refactored someFile.js for improved performance\n\nOnly return the non formatted message — no extra explanation or commentary. If you are not confident about a message or what something does **strictly** do not add it to the commit message\n\nGit diff:\n\n%s ",
+								string(diffOutput)),
 						},
 					},
 				},
@@ -234,7 +231,7 @@ func generateCommit() tea.Cmd {
 			return errMsg{err: err}
 		}
 
-		req.Header.Add("x-goog-api-key", "Bearer "+os.Getenv("GEMINI_API_KEY"))
+		req.Header.Add("X-goog-api-key", os.Getenv("GEMINI_API_KEY"))
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := client.Do(req)
@@ -266,13 +263,11 @@ func generateCommit() tea.Cmd {
 			return errMsg{err: err}
 		}
 
-		if len(aiResponse.Choices) == 0 {
+		if len(aiResponse.Candidates) == 0 {
 			return errMsg{err: errors.New("No commit generated")}
 		}
-		
-		fmt.Println(string(body))
 
-		commit := strings.ReplaceAll(aiResponse.Choices[0].Message.Content, "```", "")
+		commit := strings.ReplaceAll(aiResponse.Candidates[0].Content.Parts[0].Text, "```", "")
 
 		return commitMsg{
 			commit: commit,
