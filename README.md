@@ -48,7 +48,7 @@ Commit Buddy requires your Gemini API key to function. It reads this key from an
 **Recommended for current session:**
 
 ```bash
-export OPEN_ROUTER_API_KEY="YOUR_GEMINI_API_KEY"
+export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 ```
 
 **For persistent setup:**
