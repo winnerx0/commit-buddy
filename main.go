@@ -192,8 +192,19 @@ func main() {
 	}
 }
 
+func isGitRepo() bool {
+	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
+	err := cmd.Run()
+	return err == nil
+}
+
 func generateCommit() tea.Cmd {
 	return func() tea.Msg {
+
+		if !isGitRepo() {
+			return errMsg{err: errors.New("Not inside a Git repository. Run `git init` first.")}
+		}
+
 		client := &http.Client{}
 
 		c := exec.Command("git", "diff", "--staged")
@@ -277,20 +288,20 @@ func generateCommit() tea.Cmd {
 
 func commitCode(commit string) tea.Cmd {
 	return func() tea.Msg {
-			tmpFile, err := os.CreateTemp("", "commit-msg-*.txt")
-			if err != nil {
-				return commitDoneMsg{err}
-			}
-			defer os.Remove(tmpFile.Name())
-
-			_, err = tmpFile.WriteString(commit)
-			if err != nil {
-				return commitDoneMsg{err}
-			}
-			tmpFile.Close()
-
-			c := exec.Command("git", "commit", "-F", tmpFile.Name())
-			err = c.Run()
+		tmpFile, err := os.CreateTemp("", "commit-msg-*.txt")
+		if err != nil {
 			return commitDoneMsg{err}
 		}
+		defer os.Remove(tmpFile.Name())
+
+		_, err = tmpFile.WriteString(commit)
+		if err != nil {
+			return commitDoneMsg{err}
+		}
+		tmpFile.Close()
+
+		c := exec.Command("git", "commit", "-F", tmpFile.Name())
+		err = c.Run()
+		return commitDoneMsg{err}
+	}
 }
