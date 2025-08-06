@@ -26,6 +26,12 @@ Before you begin, ensure you have the following installed:
 
 ### Installation
 
+```bash 
+bash -c "$(curl -sLo- https://commit-buddy.vercel.app/install.sh)"
+````
+
+### How To Build
+
 ```bash
 git clone https://github.com/winnerx0/commit-buddy.git
 cd commit-buddy
