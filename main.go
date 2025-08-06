@@ -276,8 +276,21 @@ func generateCommit() tea.Cmd {
 }
 
 func commitCode(commit string) tea.Cmd {
-	c := exec.Command("git", "commit", "-m", commit)
-	return tea.ExecProcess(c, func(err error) tea.Msg {
-		return commitDoneMsg{err}
-	})
+	return func() tea.Msg {
+			tmpFile, err := os.CreateTemp("", "commit-msg-*.txt")
+			if err != nil {
+				return commitDoneMsg{err}
+			}
+			defer os.Remove(tmpFile.Name())
+
+			_, err = tmpFile.WriteString(commit)
+			if err != nil {
+				return commitDoneMsg{err}
+			}
+			tmpFile.Close()
+
+			c := exec.Command("git", "commit", "-F", tmpFile.Name())
+			err = c.Run()
+			return commitDoneMsg{err}
+		}
 }

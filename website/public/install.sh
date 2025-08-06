@@ -8,14 +8,16 @@ fi
 
 # Download and unzip
 curl -LO https://github.com/winnerx0/commit-buddy/releases/download/commit-buddy/cb.zip
+
+# Get the folder name before unzipping
+dir_name=$(unzip -Z1 cb.zip | head -n1 | cut -d/ -f1)
 unzip cb.zip
 rm cb.zip
 
-# Get the folder name dynamically
-dir_name=$(unzip -Z1 cb.zip | head -n1 | cut -d/ -f1)
+# Change to extracted directory
 cd "$dir_name"
 
-# Build and move
+# Build and move binary
 go build -o cb .
 mv cb /usr/local/bin
 
