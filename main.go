@@ -160,8 +160,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	if os.Getenv("OPEN_ROUTER_API_KEY") == "" {
-		return fmt.Sprintf("\n %s", "Please export your Open Router Api Key")
+	if os.Getenv("GEMINI_API_KEY") == "" {
+		return fmt.Sprintf("\n %s", "Please export your Gemini Api Key")
 	}
 
 	if m.err != nil {
