@@ -7,7 +7,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Download and unzip
-curl -LO https://github.com/winnerx0/commit-buddy/releases/download/1.1/cb.zip
+curl -LO https://github.com/winnerx0/commit-buddy/releases/download/1.2/cb.zip
 
 # Get the folder name before unzipping
 dir_name=$(unzip -Z1 cb.zip | head -n1 | cut -d/ -f1)
